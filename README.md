@@ -31,7 +31,8 @@ El motor del juego fue desarrollado desde cero con una arquitectura modular orie
   - Colisión esfera-esfera de precisión para la recolección fluida de coleccionables.
 - 🎥 **Cámara Cinemática en 3ra Persona:** Seguimiento suave mediante interpolación exponencial (*Lerp*) que absorbe impactos y acompaña la inercia del jugador sin vibraciones molestas.
 - 🚧 **Pistas Dinámicas & Peligros Móviles:** Plataformas con vaivén senoidal que sirven de puente sobre abismos o como bloques empujadores de barrido.
-- 🖥️ **HUD Interactivo:** Marcador de puntaje global, cronómetro por nivel, avisos de reaparición y botones interactivos compatibles con ratón y teclado.
+- 🕹️ **Sistema de Vidas Arcade:** Cuentas con **3 vidas por nivel**. Cada caída al vacío descuenta una vida y reubica la canica; si pierdes las 3 vidas, verás el mensaje *"Buen intento"* y la partida se reiniciará automáticamente al Nivel 1.
+- 🖥️ **HUD Interactivo:** Marcador de puntaje global, cronómetro por nivel, avisos de reaparición e indicador visual de vidas.
 
 ---
 
@@ -41,8 +42,6 @@ El motor del juego fue desarrollado desde cero con una arquitectura modular orie
 | :--- | :--- |
 | <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> / <kbd>↑</kbd> <kbd>←</kbd> <kbd>↓</kbd> <kbd>→</kbd> | Mover y rodar la canica |
 | <kbd>ESPACIO</kbd> | Salto / Impulso vertical (cuando está apoyada en una plataforma) |
-| <kbd>R</kbd> | Reiniciar el nivel actual tras un error o caída |
-| <kbd>1</kbd> o **Clic en Botón de Pantalla** | Reiniciar partida completa desde el **Nivel 1** |
 | <kbd>ENTER</kbd> | Continuar al siguiente nivel al alcanzar la meta / Reiniciar al ganar |
 
 ---

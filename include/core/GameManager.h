@@ -10,16 +10,13 @@
 enum class GameState {
     PLAYING,
     LEVEL_CLEARED,
+    GAME_OVER,
     GAME_COMPLETED
 };
 
 /**
  * @class GameManager
  * @brief Orquesta el ciclo de vida del juego, la progresión de niveles y el HUD.
- *
- * DIDÁCTICA POO:
- * Demuestra Composición de alto nivel: gestiona la colección de niveles (Level*),
- * el jugador (Marble*) y la lista polimórfica homogénea (GameObject*) para el renderizado.
  */
 class GameManager {
 private:
@@ -30,11 +27,13 @@ private:
     Marble* playerMarble;
     std::vector<GameObject*> activeWorldEntities;
 
+    int lives;
     int totalScore;
     float levelTimer;
     float totalTimer;
     float messageTimer;
     float levelTransitionTimer;
+    float gameOverTimer;
 
     void RebuildWorldEntities();
 

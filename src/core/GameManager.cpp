@@ -7,11 +7,13 @@ GameManager::GameManager()
     : currentLevelIndex(0),
       state(GameState::PLAYING),
       playerMarble(nullptr),
+      lives(3),
       totalScore(0),
       levelTimer(0.0f),
       totalTimer(0.0f),
       messageTimer(0.0f),
-      levelTransitionTimer(0.0f) {}
+      levelTransitionTimer(0.0f),
+      gameOverTimer(0.0f) {}
 
 GameManager::~GameManager() {
     delete playerMarble;
@@ -64,8 +66,10 @@ void GameManager::LoadLevel(int index) {
 
     currentLevelIndex = index;
     state = GameState::PLAYING;
+    lives = 3; // Cada nivel cuenta con 3 vidas
     levelTimer = 0.0f;
     messageTimer = 0.0f;
+    gameOverTimer = 0.0f;
 
     // Ajustar canica a la salida del nuevo nivel
     playerMarble->SetStartPosition(levels[currentLevelIndex]->GetStartPosition());
@@ -86,9 +90,11 @@ void GameManager::NextLevel() {
 void GameManager::RestartCurrentLevel() {
     levels[currentLevelIndex]->ResetCoinsAndGoal();
     playerMarble->Reset();
+    lives = 3;
     levelTimer = 0.0f;
     state = GameState::PLAYING;
     messageTimer = 0.0f;
+    gameOverTimer = 0.0f;
 }
 
 void GameManager::RestartGame() {
@@ -101,22 +107,6 @@ void GameManager::RestartGame() {
 }
 
 void GameManager::Update(float dt) {
-    // Botón / atajo para reiniciar al Nivel 1 (mediante clic o tecla [1])
-    Rectangle btnRestartLevel1 = { 20, 155, 200, 36 };
-    Vector2 mousePos = GetMousePosition();
-    bool btnHovered = CheckCollisionPointRec(mousePos, btnRestartLevel1);
-
-    if (IsKeyPressed(KEY_ONE) || IsKeyPressed(KEY_KP_1) || (btnHovered && IsMouseButtonPressed(MOUSE_BUTTON_LEFT))) {
-        RestartGame();
-        return;
-    }
-
-    // Controles globales: reiniciar nivel actual con [R]
-    if (IsKeyPressed(KEY_R)) {
-        RestartCurrentLevel();
-        return;
-    }
-
     if (messageTimer > 0.0f) {
         messageTimer -= dt;
     }
@@ -137,8 +127,15 @@ void GameManager::Update(float dt) {
 
         // Detección de caída al vacío
         if (currentLevel->CheckFall(playerMarble)) {
-            playerMarble->Reset();
-            messageTimer = 1.8f;
+            lives--;
+            if (lives > 0) {
+                playerMarble->Reset();
+                messageTimer = 1.8f;
+            } else {
+                // Se acabaron las 3 vidas del nivel
+                state = GameState::GAME_OVER;
+                gameOverTimer = 2.0f; // Dura 2 segundos antes de reiniciar al nivel 1
+            }
         }
 
         // Detección de llegada a la meta
@@ -154,6 +151,12 @@ void GameManager::Update(float dt) {
         levelTransitionTimer -= dt;
         if (levelTransitionTimer <= 0.0f || IsKeyPressed(KEY_ENTER)) {
             NextLevel();
+        }
+    } else if (state == GameState::GAME_OVER) {
+        // Mensaje de fin de partida: espera 2 segundos y reinicia al nivel 1
+        gameOverTimer -= dt;
+        if (gameOverTimer <= 0.0f) {
+            RestartGame();
         }
     } else if (state == GameState::GAME_COMPLETED) {
         if (IsKeyPressed(KEY_ENTER)) {
@@ -177,33 +180,47 @@ void GameManager::DrawHUD() {
     int screenHeight = GetScreenHeight();
 
     // 1. Panel de estado superior
-    DrawRectangle(20, 20, 360, 125, ColorAlpha(BLACK, 0.70f));
-    DrawRectangleLines(20, 20, 360, 125, GOLD);
+    DrawRectangle(20, 20, 360, 140, ColorAlpha(BLACK, 0.75f));
+    DrawRectangleLines(20, 20, 360, 140, GOLD);
 
-    DrawText("SUPER MONKEY MARBLE 3D", 35, 30, 20, YELLOW);
-    DrawText(levels[currentLevelIndex]->GetName().c_str(), 35, 55, 17, SKYBLUE);
-    DrawText(TextFormat("Puntaje Total: %d pts", totalScore), 35, 80, 17, RAYWHITE);
-    DrawText(TextFormat("Tiempo Nivel:  %.2f s", levelTimer), 35, 102, 17, RAYWHITE);
-    DrawText("Controles: [W][A][S][D] | [ESPACIO] Salto | [R] Reset", 35, 126, 10, LIGHTGRAY);
+    DrawText("MARBLE RUNNER 3D", 35, 30, 20, YELLOW);
+    DrawText(levels[currentLevelIndex]->GetName().c_str(), 35, 54, 16, SKYBLUE);
+    DrawText(TextFormat("Puntaje Total: %d pts", totalScore), 35, 76, 16, RAYWHITE);
+    DrawText(TextFormat("Tiempo Nivel:  %.2f s", levelTimer), 35, 96, 16, RAYWHITE);
 
-    // Botón interactivo en pantalla: Reiniciar al Nivel 1
-    Rectangle btnRestartLevel1 = { 20, 155, 200, 36 };
-    Vector2 mousePos = GetMousePosition();
-    bool btnHovered = CheckCollisionPointRec(mousePos, btnRestartLevel1);
+    // Indicador visual de Vidas (3 vidas por nivel)
+    DrawText("Vidas:", 35, 116, 16, RAYWHITE);
+    for (int i = 0; i < 3; i++) {
+        Color marbleColor = (i < lives) ? RED : DARKGRAY;
+        DrawCircle(95 + (i * 22), 125, 7, marbleColor);
+        DrawCircleLines(95 + (i * 22), 125, 7, (i < lives) ? WHITE : GRAY);
+    }
+    DrawText(TextFormat("(%d / 3)", lives), 168, 116, 16, (lives <= 1 ? RED : (lives == 2 ? YELLOW : GREEN)));
 
-    Color btnColor = btnHovered ? ColorAlpha(DARKBLUE, 0.90f) : ColorAlpha(BLACK, 0.75f);
-    DrawRectangleRec(btnRestartLevel1, btnColor);
-    DrawRectangleLinesEx(btnRestartLevel1, 2.0f, btnHovered ? YELLOW : GOLD);
-    DrawText("↺ Reiniciar Nivel 1 [1]", 35, 164, 15, btnHovered ? YELLOW : RAYWHITE);
+    DrawText("Controles: [W][A][S][D] Mover | [ESPACIO] Salto", 35, 140, 11, LIGHTGRAY);
 
-    // 2. Alerta de caída al vacío
+    // 2. Alerta de caída al vacío (cuando aún quedan vidas)
     if (messageTimer > 0.0f && state == GameState::PLAYING) {
-        DrawRectangle(screenWidth / 2 - 200, 90, 400, 50, ColorAlpha(RED, 0.85f));
-        DrawRectangleLines(screenWidth / 2 - 200, 90, 400, 50, WHITE);
-        DrawText("¡CAÍSTE AL VACÍO! Reapareciendo...", screenWidth / 2 - 175, 105, 19, WHITE);
+        DrawRectangle(screenWidth / 2 - 210, 90, 420, 50, ColorAlpha(RED, 0.85f));
+        DrawRectangleLines(screenWidth / 2 - 210, 90, 420, 50, WHITE);
+        const char* fallText = TextFormat("¡CAÍSTE AL VACÍO! Te queda%s %d vida%s",
+                                          (lives == 1 ? "" : "n"), lives, (lives == 1 ? "" : "s"));
+        DrawText(fallText, screenWidth / 2 - MeasureText(fallText, 19) / 2, 105, 19, WHITE);
     }
 
-    // 3. Cartel de Nivel Superado (Transición)
+    // 3. Cartel de GAME OVER ("Buen intento" durante 2 segundos)
+    if (state == GameState::GAME_OVER) {
+        DrawRectangle(screenWidth / 2 - 220, screenHeight / 2 - 75, 440, 150, ColorAlpha(BLACK, 0.92f));
+        DrawRectangleLines(screenWidth / 2 - 220, screenHeight / 2 - 75, 440, 150, RED);
+
+        const char* gameOverTitle = "Buen intento";
+        DrawText(gameOverTitle, screenWidth / 2 - MeasureText(gameOverTitle, 36) / 2, screenHeight / 2 - 45, 36, RED);
+
+        const char* resetNotice = "Reiniciando al Nivel 1...";
+        DrawText(resetNotice, screenWidth / 2 - MeasureText(resetNotice, 20) / 2, screenHeight / 2 + 15, 20, RAYWHITE);
+    }
+
+    // 4. Cartel de Nivel Superado (Transición)
     if (state == GameState::LEVEL_CLEARED) {
         DrawRectangle(screenWidth / 2 - 250, screenHeight / 2 - 100, 500, 170, ColorAlpha(DARKBLUE, 0.90f));
         DrawRectangleLines(screenWidth / 2 - 250, screenHeight / 2 - 100, 500, 170, LIME);
@@ -214,13 +231,13 @@ void GameManager::DrawHUD() {
         DrawText("Presiona [ENTER] para saltar", screenWidth / 2 - 110, screenHeight / 2 + 35, 14, GRAY);
     }
 
-    // 4. Cartel de Gran Victoria (Juego Terminado)
+    // 5. Cartel de Gran Victoria (Juego Terminado)
     if (state == GameState::GAME_COMPLETED) {
         DrawRectangle(screenWidth / 2 - 280, screenHeight / 2 - 120, 560, 220, ColorAlpha(BLACK, 0.92f));
         DrawRectangleLines(screenWidth / 2 - 280, screenHeight / 2 - 120, 560, 220, GOLD);
 
-        DrawText("¡CAMPEÓN DE MONKEY MARBLE!", screenWidth / 2 - 220, screenHeight / 2 - 95, 26, GOLD);
-        DrawText("¡Has superado los 3 niveles difíciles!", screenWidth / 2 - 170, screenHeight / 2 - 55, 18, RAYWHITE);
+        DrawText("¡CAMPEÓN DE MARBLE RUNNER!", screenWidth / 2 - 210, screenHeight / 2 - 95, 26, GOLD);
+        DrawText("¡Has superado los 3 niveles!", screenWidth / 2 - 140, screenHeight / 2 - 55, 18, RAYWHITE);
         DrawText(TextFormat("PUNTAJE FINAL: %d PUNTOS", totalScore), screenWidth / 2 - 145, screenHeight / 2 - 15, 22, YELLOW);
         DrawText(TextFormat("TIEMPO TOTAL:  %.2f SEGUNDOS", totalTimer), screenWidth / 2 - 150, screenHeight / 2 + 18, 20, LIME);
         DrawText("Presiona [ENTER] para volver a jugar", screenWidth / 2 - 160, screenHeight / 2 + 60, 17, ORANGE);

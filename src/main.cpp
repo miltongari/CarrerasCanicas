@@ -7,7 +7,7 @@ int main() {
     const int screenWidth = 1280;
     const int screenHeight = 720;
 
-    InitWindow(screenWidth, screenHeight, "Super Monkey Marble 3D - Prototipo Didáctico POO");
+    InitWindow(screenWidth, screenHeight, "Marble Runner 3D");
     SetTargetFPS(60);
 
     // 2. Inicialización del gestor de juego (GameManager)
