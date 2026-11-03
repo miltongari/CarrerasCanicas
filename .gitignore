@@ -1,0 +1,21 @@
+# Compilados y binarios
+*.o
+*.obj
+*.exe
+marble_runner
+marble_runner.exe
+
+# Archivos temporales y de depuración
+*.log
+*.tmp
+
+# Entornos y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Directorio de salida
+build/
+bin/
